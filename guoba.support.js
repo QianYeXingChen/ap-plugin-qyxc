@@ -435,17 +435,6 @@ export function supportGuoba() {
           },
         },
         {
-          field: "config.appreciate",
-          label: "鉴赏接口",
-          bottomHelpMessage: "用于鉴赏，二次元的我功能",
-          component: "Input",
-          required: false,
-          componentProps: {
-            placeholder: "请输入接口地址，如https://nocrypt-deepdanbooru-string.hf.space/api/predict",
-          },
-        },
-
-        {
           field: "config.ai_detect",
           label: "鉴定接口",
           bottomHelpMessage: "用于检测图片是否为AI所作，如：",
@@ -503,8 +492,50 @@ export function supportGuoba() {
           required: false,
           componentProps: {
             placeholder: "请输入密钥，如sk-tZgIILD1th6DqMiBM3VZH3BlbkFJnyEYu9t9kfQEzC6ocBOS",
+          },
+        },
+        {
+          field: "config.openai_api_url",
+          label: "OpenAI请求URL",
+          bottomHelpMessage: "怎么设置不用我说了吧……",
+          component: "Input",
+          required: false,
+          componentProps: {
+            placeholder: "请输入请求地址，如：https://openai.com/v1/chat/completions",
+          },
+        },
+        {
+          field: "config.openai_model",
+          label: "OpenAI模型名称",
+          bottomHelpMessage: "模型越贵质量越好（不是）",
+          component: "Input",
+          required: false,
+          componentProps: {
+            placeholder: "默认最便宜的，gpt-3.5-turbo",
             maxlength: 51,
             showCount: true,
+          },
+        },
+        {
+          field: "config.jianshang_model",
+          label: "绘图接口WD标签的反推模型",
+          bottomHelpMessage: "自己去前端看看，不懂保留默认就好……",
+          component: "Input",
+          required: false,
+          componentProps: {
+            placeholder: "默认：wd14-vit-v2-git",
+          },
+        },
+        {
+          field: "config.jianshang_threshold",
+          label: "鉴赏的反推阈值",
+          bottomHelpMessage: "阈值越小信息越多，建议0.35",
+          component: "Input",
+          required: false,
+          componentProps: {
+            maxlength: 4,
+            showCount: true,
+            placeholder: "默认：0.35",
           },
         },
       ],
