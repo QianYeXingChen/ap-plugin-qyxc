@@ -146,27 +146,32 @@ async function AppreciatePictures(e, API) {
         let setting = await Config.getSetting();
         let model = setting.appreciation.model;
         let threshold = setting.appreciation.threshold;
-        if (setting.appreciation.useSD) {
-            await e.reply([segment.at(e.user_id), `少女使用标签器${model}鉴赏中~（*/∇＼*）`]);
-            var msg = await requestAppreciateSD(base64, API, model, threshold);
-        } else {
-            await e.reply([segment.at(e.user_id), '少女使用WD鉴赏中~（*/∇＼*）']);
-            var msg = await requestAppreciate(base64, API);
-        }
-        if (!msg) {
-            e.reply("鉴赏出错，请查看控制台报错");
-            return true;
-        }
 
-        let end = new Date().getTime();
-        let time = ((end - start) / 1000).toFixed(2);
+        try {
+            await e.reply([segment.at(e.user_id), setting.appreciation.useSD ? `少女使用标签器${model}鉴赏中~（*/∇＼*）` : '少女使用WD鉴赏中~（*/∇＼*）']);
 
-        await e.reply([segment.at(e.user_id), `鉴赏用时：${time}秒`]);
-        e.reply(msg, true);
-        if (figure_type_user[e.user_id]) {
-            delete figure_type_user[e.user_id];
+            var msg = setting.appreciation.useSD
+                ? await requestAppreciateSD(base64, API, model, threshold)
+                : await requestAppreciate(base64, API);
+
+            if (!msg) {
+                e.reply("鉴赏出错，请查看控制台报错");
+                return true;
+            }
+
+            let end = new Date().getTime();
+            let time = ((end - start) / 1000).toFixed(2);
+
+            await e.reply([segment.at(e.user_id), `鉴赏用时：${time}秒`]);
+            e.reply(msg, true);
+        } catch (error) {
+            e.reply("鉴赏失败，可能是网络或服务器问题，请稍后再试。");
+            Log.e("鉴赏过程中出现错误:", error);
+        } finally {
+            if (figure_type_user[e.user_id]) {
+                delete figure_type_user[e.user_id];
+            }
         }
-
     } else {
         e.reply('请在60s内发送图片喵~（๑>؂<๑）');
         get_image_time[e.user_id] = setTimeout(() => {
@@ -179,12 +184,20 @@ async function AppreciatePictures(e, API) {
     }
 }
 
-// 修改后的 requestAppreciate 函数，添加了鉴权信息，并从配置读取模型和阈值
+// 带超时功能的fetch函数-----无响应超时
+function fetchWithTimeout(url, options = {}, timeout = 60000) {
+    return Promise.race([
+        fetch(url, options),
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Request timed out')), timeout)
+        )
+    ]);
+}
+
 export async function requestAppreciate(base64, API) {
     if (!API) return false;
     Log.i('解析图片tags');
 
-    // 获取配置中的API账号信息（如果有的话）
     let config = await Config.getcfg();
     let apiobj = config.APIList[config.usingAPI - 1];
     let model = config.jianshang_model || "wd14-vit-v2-git";
@@ -194,23 +207,23 @@ export async function requestAppreciate(base64, API) {
         "Content-Type": "application/json",
     };
 
-    // 如果配置了鉴权信息，则在请求头中添加Authorization
     if (apiobj.account_password) {
         headers.Authorization = `Basic ${Buffer.from(apiobj.account_id + ':' + apiobj.account_password, 'utf8').toString('base64')} `;
     }
 
     try {
-        let res = await fetch(`${API}/tagger/v1/interrogate`, {
+        let res = await fetchWithTimeout(`${API}/tagger/v1/interrogate`, {
             method: "POST",
-            headers: headers,  // 使用配置的请求头
+            headers: headers,
             body: JSON.stringify({
                 "image": "data:image/png;base64," + base64,
                 "model": model,
-                "threshold": threshold, //从配置读取阈值
+                "threshold": threshold,
             })
-        });
+        }, 10000);  // 设置10秒超时
+
         const json = await res.json();
-        console.log("API Response:", JSON.stringify(json));  // 输出API响应内容
+        console.log("API Response:", JSON.stringify(json));
         let tags_str = '';
         if (json.caption) {
             for (let tag in json.caption) {
@@ -250,7 +263,7 @@ export async function requestAppreciateSD(base64, API, model, threshold) {
         headers.Authorization = `Basic ${Buffer.from(apiobj.account_id + ':' + apiobj.account_password, 'utf8').toString('base64')} `;
     }
     try {
-        const response = await fetch(`${API}/tagger/v1/interrogate`, {
+        const response = await fetchWithTimeout(`${API}/tagger/v1/interrogate`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify({
@@ -258,9 +271,10 @@ export async function requestAppreciateSD(base64, API, model, threshold) {
                 "model": model,
                 "threshold": threshold,
             })
-        });
+        }, 10000);  // 设置10秒超时
+
         const json = await response.json();
-        console.log("API Response:", JSON.stringify(json));  // 输出API响应内容
+        console.log("API Response:", JSON.stringify(json));
         let tags_str = '';
         if (json.caption) {
             for (let tag in json.caption) {

@@ -2,7 +2,7 @@
  * @Author: 渔火Arcadia  https://github.com/yhArcadia
  * @Date: 2022-12-18 23:34:10
  * @LastEditors: 苏沫柒 3146312184@qq.com
- * @LastEditTime: 2023-05-06 22:10:08
+ * @LastEditTime: 2023-09-02 10:00:00
  * @FilePath: \Yunzai-Bot\plugins\ap-plugin\apps\ai_painting.js
  * @Description: #绘图
  * 
@@ -18,6 +18,7 @@ import { Parse, CD, Policy, Draw } from '../components/apidx.js';
 import Config from '../components/ai_painting/config.js';
 import _ from 'lodash';
 import Pictools from '../utils/pic_tools.js';
+import { _ as getLoraData } from './getLora.js';
 
 // 批量绘图的剩余张数
 let remaining_tasks = 0;
@@ -82,7 +83,43 @@ export class Ai_Painting extends plugin {
       CD.clearCD(e)
       return await e.reply(paramdata.msg, true, { recallMsg: 15 })
     }
-    // Log.i('绘图参数：\n', paramdata)                       /*  */
+
+// 检查Lora数据是否存在，若不存在则静默尝试拉取
+let loraData = await redis.get('Yz:AiPainting:LoraList');
+
+if (!loraData) {
+  // 静默获取Lora数据
+  (async () => {
+    try {
+      const apcfg = await Config.getcfg();
+      const apiIndex = apcfg.usingAPI;
+      const apiObj = apcfg.APIList[apiIndex - 1];
+      const response = await getLoraData(apiObj);
+
+      if (response.status === 200 && response.data.length > 0) {
+        await redis.set(`Yz:AiPainting:LoraList`, JSON.stringify(response.data));
+        Log.i("Lora数据拉取成功并已缓存");
+      } else {
+        Log.i("Lora数据拉取失败或为空，停止后续请求");
+        // 如果请求失败或返回数据为空，设置一个标记避免再次尝试请求
+        await redis.set(`Yz:AiPainting:LoraList`, JSON.stringify({ failed: true }), { EX: 60 * 60 }); // 缓存1小时
+      }
+    } catch (err) {
+      Log.e("Lora数据拉取失败", err);
+      // 如果出现错误，也设置一个标记避免再次尝试请求
+      await redis.set(`Yz:AiPainting:LoraList`, JSON.stringify({ failed: true }), { EX: 60 * 60 }); // 缓存1小时
+    }
+  })(); // 立即执行的异步函数
+} else {
+  // 如果缓存标记数据为失败，不再尝试请求
+  const parsedData = JSON.parse(loraData);
+  if (parsedData && parsedData.failed) {
+    Log.i("之前的Lora数据拉取失败，暂不进行新请求");
+  } else {
+    // 继续使用缓存的有效数据
+    Log.i("使用缓存中的Lora数据");
+  }
+}
 
 
     // 禁止重复发起批量绘图

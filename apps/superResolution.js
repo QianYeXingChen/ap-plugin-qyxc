@@ -32,7 +32,7 @@ export class SR extends plugin {
      */
     async Real_CUGAN(e) {
         if (!api)
-            return await e.reply('请先配置大清晰术所需接口，参考文档：https://ap-plugin.com/Config/docs3')
+            return await e.reply('请先配置大清晰术所需接口，参考文档：https://github.com/AiPreface/ap-plugin-website/blob/main/docs/Config/docs3.md')
 
         e = await parseImg(e)
 

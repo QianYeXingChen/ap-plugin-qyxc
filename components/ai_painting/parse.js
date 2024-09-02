@@ -1,13 +1,3 @@
-/*
- * @Author: 渔火Arcadia  https://github.com/yhArcadia
- * @Date: 2022-12-19 12:02:16
- * @LastEditors: 苏沫柒 3146312184@qq.com
- * @LastEditTime: 2023-05-07 10:36:53
- * @FilePath: \Yunzai-Bot\plugins\ap-plugin\components\ai_painting\parse.js
- * @Description: 解析整合特定内容
- *
- * Copyright (c) 2022 by 渔火Arcadia 1761869682@qq.com, All Rights Reserved.
- */
 import Config from "./config.js";
 import { parseImg, chNum2Num, sleep } from "../../utils/utils.js";
 import { Pictools } from "../../utils/utidx.js";
@@ -241,17 +231,16 @@ class Parse {
         msg = msg.replace(lora[0], "");
       }
       if (loraList.length > 0) {
-        const Lora = await JSON.parse(await redis.get(`Yz:AiPainting:LoraList`));
-        const LoraArr = [];
-        for (let i = 0; i < Lora.length; i++) {
-          LoraArr.push(Lora[i].name);
-        }
-        for (let i = 0; i < loraList.length; i++) {
-          const lora = loraList[i];
-          const loraName = LoraArr[lora.num - 1];
-          if (loraName) {
-            const loraWeight = lora.weight;
-            msg += `<lora:${loraName}:${loraWeight}>`;
+        const Lora = await JSON.parse(await redis.get(`Yz:AiPainting:LoraList`)) || [];
+        if (Lora.length > 0) {
+          const LoraArr = Lora.map(lora => lora.name);
+          for (let i = 0; i < loraList.length; i++) {
+            const lora = loraList[i];
+            const loraName = LoraArr[lora.num - 1];
+            if (loraName) {
+              const loraWeight = lora.weight;
+              msg += `<lora:${loraName}:${loraWeight}>`;
+            }
           }
         }
       }
@@ -261,7 +250,6 @@ class Parse {
     } catch (error) {
       Log.e("[主动替换Lora参数]出错", error);
     }
-
 
     // 取tag和ntag
     const ntgReg = /ntag(s?)( = |=|＝| ＝ )?(.*)/i;
@@ -286,9 +274,9 @@ class Parse {
       try {
         let isMatchingLora = false;
         tags = tags.replace(/，/g, ",");
-        const msgArr = tags.split(",").map(tag => tag.trim());
+        const msgArr = tags.split(",").map(tag => tag.trim()) || [];
         let allMatchedLora = [];
-        const loraArr = (await JSON.parse(await redis.get(`Yz:AiPainting:LoraList`))).map(lora => lora.name);
+        const loraArr = (await JSON.parse(await redis.get(`Yz:AiPainting:LoraList`)))?.map(lora => lora.name) || [];
         for (let i = 0; i < msgArr.length; i++) {
           // 如果包含不包含中文字符则进入新的循环
           if (!/[\u4E00-\u9FFF]/g.test(msgArr[i])) continue;
@@ -296,7 +284,7 @@ class Parse {
           if (msgElement === "") continue;
           const matchingLora = loraArr.find(loraName => loraName.includes(msgElement));
           if (matchingLora) {
-            allMatchedLora.push(matchingLora)
+            allMatchedLora.push(matchingLora);
             const weight = msgArr[i].split(":")[1] || 0.8;
             msgArr[i] = `<lora:${matchingLora}:${weight}>`;
             isMatchingLora = true;
@@ -304,13 +292,12 @@ class Parse {
         }
         tags = msgArr.join(",");
         if (isMatchingLora) {
-          e.reply(`匹配到Lora：${allMatchedLora.join(",")}`)
+          e.reply(`匹配到Lora：${allMatchedLora.join(",")}`);
         }
       } catch (error) {
         console.error("[主动替换Lora参数]出错", error);
       }
     }
-
 
     const pt_reg = /(【.+?】|<[^<>]+?>)/;
     const pt = [];
@@ -342,10 +329,6 @@ class Parse {
       }
       ntags = ntags.replace(check_tag[0], "");
     }
-    // Log.i(pt)
-    // Log.i(npt)
-    // Log.i(tags)
-    // Log.i(ntags)
 
     if ("scale" in param) scale = scale || param.scale;
     if ("sampler" in param) sampler = sampler || param.sampler;
@@ -353,8 +336,7 @@ class Parse {
     // 处理特殊字符==========
     tags = this.replacespc(tags);
     ntags = this.replacespc(ntags);
-    // Log.i(tags)
-    // Log.i(ntags)
+
     // 整合参数
     const txtparam = {
       param: {
@@ -446,19 +428,11 @@ class Parse {
         for (const key of val.keywords) {
           // 如果预设key在正面tag中
           if (rawt.includes(key) && key.length > matchedWord.length) {
-            // let regexp = new RegExp(`【\[\^【】\]\*${key}\[\^【】\]\*】`) // ==>  /【[^【】]*key[^【】]*】/   表示key两侧有【】
-            // if (regexp.test(rawt)) {
-            //     continue
-            // }
             matchedPst = val;
             matchedWord = key; // 存一下匹配到的key
           }
           // 如果预设key在负面tag中
           else if (rawnt.includes(key) && key.length > matchedWord_n.length) {
-            // let regexp = new RegExp(`【\[\^【】\]\*${key}\[\^【】\]\*】`) // ==>  /【[^【】]*key[^【】]*】/   表示key两侧有【】
-            // if (regexp.test(rawnt)) {
-            //     continue
-            // }
             matchedPst_n = val;
             matchedWord_n = key; // 存一下匹配到的key
           }
@@ -475,7 +449,7 @@ class Parse {
           ? ntags.replace("默认", "") + "," + matchedPst.ntags
           : ntags;
         param = matchedPst.param;
-        // key在负面tag中，负面tag替换，正面ttag加在尾部
+      // key在负面tag中，负面tag替换，正面ttag加在尾部
       } else if (matchedWord_n.length) {
         rawnt = rawnt.replace(matchedWord_n, "");
         tags = tags + matchedPst_n.tags ? `,${matchedPst_n.tags}` : "";
@@ -503,16 +477,13 @@ class Parse {
   async trans(tg) {
     const chReg =
       /([\u3400-\u4DB5\u4E00-\u9FEA\uFA0E\uFA0F\uFA11\uFA13\uFA14\uFA1F\uFA21\uFA23\uFA24\uFA27-\uFA29]|[\uD840-\uD868\uD86A-\uD86C\uD86F-\uD872\uD874-\uD879][\uDC00-\uDFFF]|\uD869[\uDC00-\uDED6\uDF00-\uDFFF]|\uD86D[\uDC00-\uDF34\uDF40-\uDFFF]|\uD86E[\uDC00-\uDC1D\uDC20-\uDFFF]|\uD873[\uDC00-\uDEA1\uDEB0-\uDFFF]|\uD87A[\uDC00-\uDFE0])+/g;
-    // let CH_list = [...Object.values(tg.match(chReg))]
     const CH_list = tg.match(chReg);
     if (!CH_list || CH_list.length == 0) {
       return tg;
     }
     for (let i = 0; i < CH_list.length; i++) {
-      // if (i) { await sleep(1500) }
       const en = await Translate.t(CH_list[i]);
       tg = tg.replace(CH_list[i], en.toLowerCase());
-      // Log.i(CH_list[i], ' ==> ', en)
     }
     return tg;
   }

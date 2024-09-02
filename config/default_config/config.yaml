@@ -9,7 +9,7 @@ remove_bg:
 anime_aesthetic_predict:
 cartoonization:
 openai_key: 
-openai_api_url: 
+openai_api_url: https://api.gptgod.online/v1/chat/completions
 openai_model: gpt-3.5-turbo
 jianshang_model: wd14-vit-v2-git
 jianshang_threshold: "0.35"

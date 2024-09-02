@@ -202,21 +202,71 @@ export class set extends plugin {
 		return true
 	}
 
-	/**查看接口列表     */
-	async apilist(e) {
-		let apcfg = await Config.getcfg()
-		let li = []
-		let i = 1
-		if (apcfg.APIList.length == 0) {
-			return e.reply("当前无可用接口，请先添加接口\n命令：#ap添加接口\n参考文档：https://ap-plugin.com/Config/docs1")
-		}
-		for (let val of apcfg.APIList) {
-			li.push(`${i}：${val.remark}${i == apcfg.usingAPI ? ' [默认]' : ''}` + (e.isPrivate && e.isMaster ? `\n   ${val.url}` : ''))
-			i++
-		}
-		e.reply(li.join('\n'))
-		return true
-	}
+/**查看接口列表 */
+async apilist(e) {
+    let apcfg = await Config.getcfg();
+    let li = [];
+    let i = 1;
+
+    if (apcfg.APIList.length == 0) {
+        return e.reply("当前无可用接口，请先添加接口\n命令：#ap添加接口\n参考文档：https://github.com/AiPreface/ap-plugin-website/blob/main/docs/Config/docs1.md");
+    }
+
+    for (let val of apcfg.APIList) {
+        let entry = `${i}：${val.remark}${i == apcfg.usingAPI ? ' [默认]' : ''}` + (e.isPrivate && e.isMaster ? `\n   ${val.url}\n`  : '');
+     //如果是我的域名就获取，不是就不理
+        if (val.url.includes('sd.qyxc.org') || 
+            val.url.includes('sd.fuck996.win') || 
+            val.url.includes('sd.fuck007.win')) {
+            try {
+                // 从配置中读取用户设置的密钥（即密码）
+                let key = val.account_password;
+                let username = val.account_id;
+
+                if (key) {
+                    // 请求获取到期时间，传递用户名和密钥
+                    let res = await axios.post(`${val.url}/Expiration_Date`, {
+                        key: key,
+                        username: username
+                    });
+
+                    if (res.data.exists) {
+                        if (!res.data.activated) {
+                            entry += `   密钥有效期：未激活`;
+                            entry += `\n   激活状态：未激活`;
+                            entry += `\n   等级：${res.data.gear}\n`;
+                        } else if (res.data.expired) {
+                            entry += `   密钥有效期：${res.data.expiration_date}`;
+                            entry += `\n   激活状态：已过期`;
+                            entry += `\n   等级：${res.data.gear}\n`;
+                        } else {
+                            entry += `   密钥有效期：${res.data.expiration_date}`;
+                            entry += `\n   激活状态：已激活`;
+                            entry += `\n   等级：${res.data.gear}\n`;
+                        }
+                    } else {
+                        entry += `\n   密钥或用户名不正确，获取信息失败`;
+                    }
+                } else {
+                    entry += `   未设置密钥，无法获取到期时间`;
+                }
+            } catch (error) {
+                entry += `   获取密钥信息失败\n`;
+                console.error(`获取密钥信息失败: ${error.message}`);
+            }
+        }
+
+        li.push(entry);
+        i++;
+    }
+
+    e.reply(li.join('\n'));
+    return true;
+}
+
+
+
+
 
 	/**  查看当前ap设置 */
 	async config(e) {
@@ -391,36 +441,43 @@ export class set extends plugin {
 		this.e.reply(testres ? `接口可用` : `接口未正确响应，您可能配置了错误的接口`, true)
 		return testres
 	}
+/**查看当前接口支持的采样器列表 */
+async samplerlist(e) {
+    // 取默认接口
+    let apcfg = await Config.getcfg();
+    if (apcfg.APIList.length == 0) {
+        e.reply('当前暂无可用接口');
+        return true;
+    }
+    let index = apcfg.usingAPI;
+    let apiobj = apcfg.APIList[index - 1];
+    let api = apiobj.url; // 接口地址
+    let remark = apiobj.remark; // 接口备注
 
-	/**查看当前接口支持的采样器列表 */
-	async samplerlist(e) {
-		// 取默认接口
-		let apcfg = await Config.getcfg()
-		if (apcfg.APIList.length == 0) {
-			e.reply('当前暂无可用接口')
-			return true
-		}
-		let index = apcfg.usingAPI
-		let apiobj = apcfg.APIList[index - 1]
-		let api = apiobj.url //接口
-		let remark = apiobj.remark //接口备注
-		try {
-			let res = await fetch(api + `/sdapi/v1/samplers`)
-			if (res.status == 404) {
-				return e.reply('拉取列表失败')
-			}
-			res = await res.json()
-			let samplerList = []
-			for (let val of res)
-				samplerList.push(val.name)
-			e.reply(`当前接口[${remark}]支持如下采样器：\n` + samplerList.join('\n'))
-		} catch (err) {
-			Log.e(err)
-			return e.reply('拉取列表失败')
-		}
-		return true
+    try {
+        // 构造请求头，如果设置了鉴权信息
+        let headers = {};
+        if (apiobj.account_id && apiobj.account_password) {
+            headers['Authorization'] = 'Basic ' + Buffer.from(`${apiobj.account_id}:${apiobj.account_password}`).toString('base64');
+        }
 
-	}
+        let res = await fetch(api + `/sdapi/v1/samplers`, { headers: headers });
+        if (res.status == 404) {
+            return e.reply('拉取列表失败');
+        }
+        res = await res.json();
+        let samplerList = [];
+        for (let val of res)
+            samplerList.push(val.name);
+        e.reply(`当前接口[${remark}]支持如下采样器：\n` + samplerList.join('\n'));
+    } catch (err) {
+        Log.e(err);
+        return e.reply('拉取列表失败');
+    }
+    return true;
+}
+
+
 
 
 	/**设置百度和有道翻译的appid和key  */

@@ -35,7 +35,7 @@ export class nat2pmpt extends plugin {
 	}
 	async nat2pmpt(e) {
 		if (!API)
-			return await e.reply("请先配置处理所需的OpenAI Key，配置教程：https://ap-plugin.com/Config/docs13")
+			return await e.reply("请先配置处理所需的OpenAI Key，配置教程：https://github.com/AiPreface/ap-plugin-website/blob/main/docs/Config/docs1.md3")
 		
 		let lang = e.msg.replace(/^#处理/, '');
 		if (!lang)
