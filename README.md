@@ -11,7 +11,7 @@
 - **使用中遇到问题请加 QQ 群咨询：[707331865](https://qm.qq.com/q/TXTIS9KhO2)**
 
 > [!TIP]
-> 这个插件是我刚接触 Yunzai 时，和一个叫 [渔火](https://github.com/yhArcadia) 的大哥哥一起写的（其实我就是在他的插件上面加乱七八糟的东西，导致现在这么臃肿）。他是我的启蒙老师哦，之前我是一点 JavaScript 都不会的。现在他都退坑了都找到女朋友啦！
+> Fork的仓库，添加和修改了一些绘图配置，基本和上游仓库一致，修复一点BUG，代码是真的很臃肿，好难读，还好有Chatgpt……非专业人员，业余爱好，可能还会有BUG，欢迎反馈。SD接口可前往： [爱发电获取](https://afdian.com/a/yunzaixiaoqian) 
 
 ## 安装插件
 
@@ -38,6 +38,14 @@ pnpm install --filter=ap-plugin
 
 > [!WARNING]
 > 非常不建议手动修改配置文件，本插件已兼容 [Guoba-plugin](https://github.com/guoba-yunzai/guoba-plugin) ，请使用锅巴插件对配置项进行修改
+
+- 和上游仓库对比做了一些改动和修复BUG，其余基本没变化，具体改动如下。
+1、#绘图，接口首次绘图若redis没有缓存lora会自动静默获取（应该是首次吧？不确定）后续请根据需求发送指令：#lora列表 来更新
+2、#VAE模型列表、#vae模型切换，适配新版SD后端，我用的是秋叶端，原仓库没有办法切换，（不知道是不是BUG，反正我改了。）
+3、#鉴赏，接口更改使用SD自带的WD标签器API。添加异步处理，避免超时导致无限排队。
+4、#处理，使用chatgpt处理自然语言转提示词功能，更改成支持自定义请求地址，模型选择。可以根据需要自行配置。
+5、#采样器列表 拉取失败，修复。（不知道是不是BUG，反正我改了。）
+
 
 - 关于部署 Stable Diffuison，请自行在网上寻找教程，这里放一个 [秋葉 aaaki 的教程](https://www.bilibili.com/video/BV1iM4y1y7oA)
 
