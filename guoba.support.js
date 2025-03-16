@@ -85,7 +85,7 @@ export function supportGuoba() {
           component: "Input",
           required: false,
           componentProps: {
-            maxlength: 8,
+            maxlength: 12,
             showCount: true,
             placeholder: "请输入BAIDU_APPID",
           },
